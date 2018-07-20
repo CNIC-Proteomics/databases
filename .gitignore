@@ -1,0 +1,7 @@
+# Virtual Environment
+venv_win64/python3x
+venv_win64/venv_win64_py3x
+
+# Visual Studio Code
+.vscode
+
