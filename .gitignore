@@ -2,6 +2,12 @@
 venv_win64/python3x
 venv_win64/venv_win64_py3x
 
+# Test folder
+test
+
+# Python cache
+src/lib/__pycache__
+
 # Visual Studio Code
 .vscode
 
