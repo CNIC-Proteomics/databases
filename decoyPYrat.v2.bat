@@ -7,8 +7,8 @@ SET DB_HOME=%CD%
 
 :: input parameters
 REM :: Unit test
-REM SET InFile=D:\projects\databases\test\test2.fa
-REM SET OutFile=D:\projects\databases\test\test2.decoy.fa
+REM SET InFile=%DB_HOME%\test\test2.fa
+REM SET OutFile=%DB_HOME%\test\test2.decoy.fa
 SET /p InFile="Enter the target file (in FASTA format): "
 SET /p OutFile="Enter the decoy file (in FASTA format): "
 

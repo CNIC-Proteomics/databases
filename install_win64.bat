@@ -1,8 +1,10 @@
 @ECHO OFF
 
+:: check env varibles are defined
+IF "%PYTHON3x_HOME%"=="" GOTO :EndProcess1
+
 :: get the python executable files
 SET DB_HOME=%CD%
-SET PYTHON3x_HOME=%DB_HOME%/venv_win64/python3x
 ECHO **
 ECHO ** use the following paths for python3x:
 ECHO %PYTHON3x_HOME%
@@ -13,7 +15,7 @@ CD %DB_HOME%
 REM :: install the PIP packages
 ECHO **
 ECHO ** install the 'pip' package for python3x
-REM CMD /C " "%PYTHON3x_HOME%/python" "%DB_HOME%/venv_win64/get-pip.py" "
+CMD /C " "%PYTHON3x_HOME%/python" "%DB_HOME%/venv_win64/get-pip.py" "
 ECHO " "%PYTHON3x_HOME%/python" "%DB_HOME%/venv_win64/get-pip.py" "
 
 :: install virtualenv packages
@@ -35,7 +37,7 @@ CMD /C " "%DB_HOME%/venv_win64/venv_win64_py3x/Scripts/activate.bat" && pip inst
 GOTO :EndProcess
 
 :EndProcess1
-    ECHO DB_HOME env. variable is NOT defined
+    ECHO PYTHON3x_HOME env. variable is NOT defined
     GOTO :EndProcess
 
 :: wait to Enter => Good installation
