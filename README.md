@@ -6,16 +6,14 @@ Improvement on DecoyPYrat script from Sanger (https://www.sanger.ac.uk/science/t
 
 1. Download and execute the latest Python 3.* installation package from [here](https://www.python.org/downloads/windows/).  
 _While either 32-bit (x86) or 64-bit (x86-64) versions should work just fine_
-* Verify a successful installation by opening a command prompt window and navigating to your Python installation directory (default is `C:\Python27`).  Type `python` from this location to launch the Python interpreter.
+* Verify a successful installation by opening a command prompt window and navigating to your Python installation directory (Note!! Keep in mind the Path).  Type `python` from this location to launch the Python interpreter.
+
     ```
-    Microsoft Windows [Version 6.2.9200]
-    (c) 2012 Microsoft Corporation. All rights reserved.
-    
-    C:\Users\Username>cd C:\Python27
-    
-    C:\Python27>python
-    Python 2.7.8 (default, Jun 30 2014, 16:03:49) [MSC v.1500 32 bit (Intel)] on win
-    32
+    Microsoft Windows [Version 6.1.7601]
+    Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+    C:\Users\jmrodriguezc>python
+    Python 3.7.0 (v3.7.0:1bf9cc5093, Jun 27 2018, 04:59:51) [MSC v.1914 64 bit (AMD64)] on win32
     Type "help", "copyright", "credits" or "license" for more information.
     >>>
     ```
