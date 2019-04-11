@@ -2,13 +2,28 @@ import sys, os, logging
 import urllib.request
 import datetime
 import re
+import zipfile
+import json
 from Bio import SwissProt
+from Bio import SeqIO
+from Bio.KEGG import REST
+from Bio.KEGG import Enzyme
+
 
 __author__ = 'jmrodriguezc'
+__credits__ = ["Jose Rodriguez", "Jesus Vazquez"]
+__license__ = "Creative Commons Attribution-NonCommercial-NoDerivs 4.0 Unported License https://creativecommons.org/licenses/by-nc-nd/4.0/"
+__version__ = "0.0.1"
+__maintainer__ = "Jose Rodriguez"
+__email__ = "jmrodriguezc@cnic.es"
+__status__ = "Development"
+
 
 class creator:
     URL_UNIPROT = 'https://www.uniprot.org/uniprot/?'
-    SPECIES = {
+    URL_CORUM   = 'http://mips.helmholtz-muenchen.de/corum/download/allComplexes.json.zip'
+    URL_PANTHER = 'ftp://ftp.pantherdb.org/sequence_classifications/current_release/PANTHER_Sequence_Classification_files/'
+    SPECIES_LIST = {
         'human': {
             'scientific': 'Homo sapiens',
             'proteome': 'UP000005640'
@@ -27,23 +42,39 @@ class creator:
         }
     }    
     TMP_DIR = 'tmp'
-    LIST_TERMS = ['GO', ]
-    HEADER = ['Category', 'Fasta']
+    LIST_TERMS = ['GO','KEGG','PANTHER','Reactome','CORUM','DrugBank']
+    HEADER = ['Hit','Category']
 
     '''
     Creates the databases
     '''
-    def __init__(self, s):
-        # species variables
-        self.species = s.lower()
-        if self.species in self.SPECIES:
-            self.proteome_id = self.SPECIES[ self.species ]['proteome']
+    def __init__(self, s, o, i=None, f=None):
+        # assign species
+        species = s.lower()
+        if species in self.SPECIES_LIST:
+            self.species = species
+            self.proteome_id = self.SPECIES_LIST[self.species]['proteome']
         else:
-            sys.exit("ERROR: Species parameter has been not found")
-        # date time
-        self.datetime = datetime.datetime.now().strftime("%Y%m%d")
-        # delete any temporal file
-        self._delete_tmp_dir(self.TMP_DIR)
+            sys.exit( "ERROR: Species parameter has been not found. Try with: "+", ".join(self.SPECIES_LIST.keys()) )
+        # get/create the fasta sequences
+        if i:
+            self.db_fasta = i
+            self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
+        else:
+            self.outfname = species +'_'+ self.proteome_id +'_'+ datetime.datetime.now().strftime("%Y%m%d")
+            self.db_fasta = o +'/'+ self.outfname +'.fasta'
+            self.download_fasta_db(self.db_fasta, f)
+        # create data files
+        self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
+        self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
+        self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
+        # create output directory if does not exist
+        if not os.path.exists(o):
+            os.makedirs(o, exist_ok=True)
+        # create output file
+        self.outfile = o +'/'+ self.outfname +'.tsv'
+        # # delete any temporal file
+        # self._delete_tmp_dir(self.TMP_DIR)
 
     def _delete_tmp_dir(self, dir):
         files = [ f for f in os.listdir(dir) ]
@@ -53,63 +84,151 @@ class creator:
             except Exception as e:
                 logging.error(e)
 
-    def download_raw_db(self):
+    def download_raw_dbs(self, filt):
         '''
-        Download the raw database file
+        Download the raw databases
         '''
-        url = self.URL_UNIPROT
-        if self.proteome_id:
-            url += "query=proteome:"+ self.proteome_id
-            url_txt = url+"&format=txt"
-            logging.debug('get '+url_txt)
-            self.db_dat = self.TMP_DIR + '/' + self.species + '_' + self.proteome_id + '_' + self.datetime + '.dat'
-            urllib.request.urlretrieve(url_txt, self.db_dat)
-            url_txt = url+"&format=fasta"
-            logging.debug('get '+url_txt)
-            self.db_fasta = self.TMP_DIR + '/' + self.species + '_' + self.proteome_id + '_' + self.datetime + '.fasta'
-            urllib.request.urlretrieve(url_txt, self.db_fasta)
+        # UniProt
+        # filter by SwissProt (Reviewd) if apply
+        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
+        url = url +'&format=txt'
+        if filt and filt == "sw":
+            url += '%20reviewed:yes'
+        url += '&format=fasta'
+        logging.debug("get "+url)
+        urllib.request.urlretrieve(url, self.db_uniprot)
+        
+        # CORUM
+        # download all complexes file (using the same name)
+        # unzip the file
+        url = self.URL_CORUM
+        db_dat = self.TMP_DIR +'/'+ os.path.basename(url)
+        logging.debug("get "+url)
+        urllib.request.urlretrieve(url, db_dat)
+        zip_ref = zipfile.ZipFile(db_dat, 'r')
+        zip_ref.extractall(self.TMP_DIR)
+        zip_ref.close()
+        
+        # PANTHER
+        # get the list of species and extract the file name
+        url = self.URL_PANTHER
+        result = urllib.request.urlopen(url).read().decode('utf-8')
+        if result:
+            pattern = re.search(r'\s*(PTHR[^\_]*\_'+self.species+')', result, re.I | re.M)
+            if pattern:
+                url = self.URL_PANTHER + pattern[1]
+                logging.debug("get "+url)
+                urllib.request.urlretrieve(url, self.db_panther)
+        
 
-    def parse_raw_db(self):
+    def download_fasta_db(self, outfile, filt):
+        '''
+        Download the fasta database file
+        '''
+        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id        
+        if filt and filt == "sw": # filter by SwissProt
+            url += '%20reviewed:yes'
+        url += '&format=fasta'
+        logging.debug('get '+url)
+        urllib.request.urlretrieve(url, outfile)
+
+    def extract_identifiers(self, regex):
+        '''
+        Extract the identifiers from the FASTA file
+        '''
+        ids = []
+        pattern = regex if regex else '[^\|]*\|([^\|]*)\|' # by default is UniProt
+        records = SeqIO.parse(self.db_fasta, "fasta")
+        for record in records:
+            match = re.search(pattern, record.description, re.I | re.M)
+            if match:
+                ids.append(match[1])
+        return ids
+        
+    def extract_categories(self, ids, type):
         '''
         Parse the raw database file
         '''
-        if self.db_dat:
-            for record in SwissProt.parse( open(self.db_dat) ):
-# PTHR22443~FAMILY NOT NAMED	>sp|A0AUZ9|KAL1L_HUMAN KAT8 regulatory NSL complex subunit 1-like protein OS=Homo sapiens GN=KANSL1L PE=1 SV=2
-# metastatic colorectal cancer	>sp|A0AV02|S12A8_HUMAN Solute carrier family 12 member 8 OS=Homo sapiens GN=SLC12A8 PE=2 SV=3
-# 778063:centrosomal protein 250kDa	>tr|Q15136|Q15136_HUMAN Protein kinase A-alpha (Fragment) OS=Homo sapiens GN=KIN27 PE=2 SV=1
-# 778063:centrosomal protein 250kDa	>tr|Q5JPD5|Q5JPD5_HUMAN Centromere protein J OS=Homo sapiens GN=DKFZp667E025 PE=2 SV=1
-                dsc = record.description
-                org = re.search(r'OS=(\w* \w*)', record.organism, re.I | re.M)
-                gen = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
-                comm = ">"+ record.accessions[0] +"|"+ record.entry_name +"|"+ dsc +" OS="+ org +" GN="+gen
+        output = ''
+        if self.db_uniprot:
+            # create reports from external data
+            with open(self.db_corum, 'r') as f:
+                corum_json = json.load(f)
+            with open(self.db_panther, 'r') as f:
+                panther_txt = f.read()
+            # Extract the info from the main database (UniProt), if apply
+            for record in SwissProt.parse( open(self.db_uniprot) ):
+                prot_acc = record.accessions[0]
+                if prot_acc in ids:
+                    prot_accs = ";".join(record.accessions[1:])
+                    pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
+                    gene_name = pattern[1] if pattern else record.gene_name         
+                    pattern = re.search(r'[RecName|SubName]: Full=([^\;|\{]*)', record.description, re.I | re.M)
+                    dsc = pattern[1] if pattern else record.description
+                    dclass = record.data_class
+                    # identification column
+                    if type == "gene":
+                        id = gene_name
+                    else:
+                        id = prot_acc
+                    main_columns = id
+                    # save cross references
+                    for reference in record.cross_references:
+                        extdb = reference[0]
+                        extdesc = ''
+                        if extdb in self.LIST_TERMS:
+                            extid = reference[1]
+                            extdesc = "|".join(reference[1:])
+                            if extdb == "KEGG":
+                                extdesc = self._extract_cat_kegg(extid)
+                            elif extdb == "CORUM":
+                                extdesc = self._extract_cat_corum(id, corum_json)
+                            elif extdb == "PANTHER":
+                                extdesc = self._extract_cat_panther(id, panther_txt)
+                            if extdesc != '':
+                                output += main_columns +"\t"+ extdesc +"\n"
+        return output
 
-                print("*****")
-                print( comm )
-                print( "--" )
-                print(record.entry_name)
-                print(",".join(record.accessions))
-                print(record.keywords)
-                print(repr(record.organism))
-                print(record.sequence[:20] + "...")
-                print("----")
-                
-                for reference in record.cross_references:
-                    print(reference)
-                # for reference in record.references:
-                #     for ref in reference.references:
-                #         print(ref)
-                print( record['DR'] )
-                # for feature in record.features:
-                #     print(feature)
+    def _extract_cat_kegg(self, id):
+        '''
+        Parse the raw database file
+        '''            
+        out = id+'|'
+        record = REST.kegg_get(id).read()
+        if record:
+            pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
+            out += pattern[1] if pattern else ''
+            pattern = re.search(r'PATHWAY\s*([^\n]*)', record, re.I | re.M)
+            out += ";"+pattern[1] if pattern else ''
+        return out
 
-    def to_file(self, outdir):
+    def _extract_cat_corum(self, id, allComp):
+        '''
+        Parse the raw database file
+        '''
+        out = ''
+        comps = list(filter(lambda person: id in person['subunits(UniProt IDs)'], allComp))
+        if comps:
+            out += ";".join([ str(comp['ComplexID'])+'|'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
+        return out
+
+    def _extract_cat_panther(self, id, allFam):
+        '''
+        Parse the raw database file
+        '''            
+        out = ''
+        pattern = re.search(r'UniProtKB='+id+'\t*([^\t]*)\t*([^\t]*)', allFam, re.I | re.M)
+        out += pattern[1]+'|'+pattern[2] if pattern else ''
+        return out
+
+    def to_file(self, output):
         '''
         Print to file
         '''
-        # create output directory if does not exist
-        if not os.path.exists(outdir):
-            os.makedirs(outdir, exist_ok=True)
-        outfile = self.TMP_DIR + '/' + self.species + '_' + self.proteome_id + '_' + self.datetime + '.txt'
+        f = open(self.outfile, "w")
+        f.write("\t".join(self.HEADER)+"\n")
+        f.write(output)
+        f.close()
+
 
 
