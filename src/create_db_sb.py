@@ -2,7 +2,7 @@
 
 import argparse, logging, os, sys
 
-from lib import db
+import db
 
 __author__ = 'jmrodriguezc'
 
@@ -19,8 +19,8 @@ def main(args):
     logging.info("extract list of identifiers")
     ids = w.extract_identifiers(args.regex)
 
-    # logging.info("download raw file")
-    # w.download_raw_dbs(args.filt)
+    logging.info("download raw file")
+    w.download_raw_dbs(args.filt)
 
     logging.info("extract categories by "+ args.type)
     output = w.extract_categories(ids, args.type)

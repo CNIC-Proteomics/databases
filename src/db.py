@@ -41,9 +41,8 @@ class creator:
             'proteome': 'UP000001811'
         }
     }    
-    TMP_DIR = 'tmp'
     LIST_TERMS = ['GO','KEGG','PANTHER','Reactome','CORUM','DrugBank']
-    HEADER = ['Hit','Category']
+    HEADER = ['Category','Hit']
 
     '''
     Creates the databases
@@ -56,25 +55,30 @@ class creator:
             self.proteome_id = self.SPECIES_LIST[self.species]['proteome']
         else:
             sys.exit( "ERROR: Species parameter has been not found. Try with: "+", ".join(self.SPECIES_LIST.keys()) )
+        # create output directory if does not exist
+        self.outdir = o +'/'+ datetime.datetime.now().strftime("%Y%m%d")
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir, exist_ok=True)
+        # create temporal file
+        self.TMP_DIR = os.path.dirname(os.path.abspath(__file__)) + '/../tmp/'+ self.species
+        os.makedirs(self.TMP_DIR, exist_ok=True)
+        logging.debug(self.TMP_DIR)
         # get/create the fasta sequences
         if i:
             self.db_fasta = i
             self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
         else:
             self.outfname = species +'_'+ self.proteome_id +'_'+ datetime.datetime.now().strftime("%Y%m%d")
-            self.db_fasta = o +'/'+ self.outfname +'.fasta'
+            self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'
             self.download_fasta_db(self.db_fasta, f)
         # create data files
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
         self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
-        # create output directory if does not exist
-        if not os.path.exists(o):
-            os.makedirs(o, exist_ok=True)
         # create output file
-        self.outfile = o +'/'+ self.outfname +'.tsv'
-        # # delete any temporal file
-        # self._delete_tmp_dir(self.TMP_DIR)
+        self.outfile = self.outdir +'/'+ self.outfname +'.tsv'
+        # delete any temporal file
+        self._delete_tmp_dir(self.TMP_DIR)
 
     def _delete_tmp_dir(self, dir):
         files = [ f for f in os.listdir(dir) ]
@@ -152,10 +156,14 @@ class creator:
         output = ''
         if self.db_uniprot:
             # create reports from external data
-            with open(self.db_corum, 'r') as f:
-                corum_json = json.load(f)
-            with open(self.db_panther, 'r') as f:
-                panther_txt = f.read()
+            corum_json = None
+            panther_txt = None
+            if os.path.isfile(self.db_corum):
+                with open(self.db_corum, 'r') as f:
+                    corum_json = json.load(f)
+            if os.path.isfile(self.db_panther):
+                with open(self.db_panther, 'r') as f:
+                    panther_txt = f.read()
             # Extract the info from the main database (UniProt), if apply
             for record in SwissProt.parse( open(self.db_uniprot) ):
                 prot_acc = record.accessions[0]
@@ -186,7 +194,7 @@ class creator:
                             elif extdb == "PANTHER":
                                 extdesc = self._extract_cat_panther(id, panther_txt)
                             if extdesc != '':
-                                output += main_columns +"\t"+ extdesc +"\n"
+                                output += extdesc +"\t"+ main_columns +"\n"
         return output
 
     def _extract_cat_kegg(self, id):
@@ -207,18 +215,20 @@ class creator:
         Parse the raw database file
         '''
         out = ''
-        comps = list(filter(lambda person: id in person['subunits(UniProt IDs)'], allComp))
-        if comps:
-            out += ";".join([ str(comp['ComplexID'])+'|'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
+        if allComp:
+            comps = list(filter(lambda person: id in person['subunits(UniProt IDs)'], allComp))
+            if comps:
+                out += ";".join([ str(comp['ComplexID'])+'|'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
         return out
 
     def _extract_cat_panther(self, id, allFam):
         '''
         Parse the raw database file
-        '''            
+        '''
         out = ''
-        pattern = re.search(r'UniProtKB='+id+'\t*([^\t]*)\t*([^\t]*)', allFam, re.I | re.M)
-        out += pattern[1]+'|'+pattern[2] if pattern else ''
+        if allFam:
+            pattern = re.search(r'UniProtKB='+id+'\t*([^\t]*)\t*([^\t]*)', allFam, re.I | re.M)
+            out += pattern[1]+'|'+pattern[2] if pattern else ''
         return out
 
     def to_file(self, output):
