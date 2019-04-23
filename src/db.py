@@ -43,6 +43,7 @@ class creator:
     }    
     LIST_TERMS = ['GO','KEGG','PANTHER','Reactome','CORUM','DrugBank']
     HEADER = ['Category','Hit']
+    TIME = datetime.datetime.now().strftime("%Y%m")
 
     '''
     Creates the databases
@@ -55,8 +56,9 @@ class creator:
             self.proteome_id = self.SPECIES_LIST[self.species]['proteome']
         else:
             sys.exit( "ERROR: Species parameter has been not found. Try with: "+", ".join(self.SPECIES_LIST.keys()) )
+        
         # create output directory if does not exist
-        self.outdir = o +'/'+ datetime.datetime.now().strftime("%Y%m%d")
+        self.outdir = o +'/'+ self.TIME
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir, exist_ok=True)
         # create temporal file
@@ -68,7 +70,7 @@ class creator:
             self.db_fasta = i
             self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
         else:
-            self.outfname = species +'_'+ self.proteome_id +'_'+ datetime.datetime.now().strftime("%Y%m%d")
+            self.outfname = species +'_'+ self.proteome_id +'_'+ self.TIME
             self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'
             self.download_fasta_db(self.db_fasta, f)
         # create data files
@@ -118,7 +120,7 @@ class creator:
         url = self.URL_PANTHER
         result = urllib.request.urlopen(url).read().decode('utf-8')
         if result:
-            pattern = re.search(r'\s*(PTHR[^\_]*\_'+self.species+')', result, re.I | re.M)
+            pattern = re.search(r'\s*(PTHR[^\_]*\_'+self.species+'\_)', result, re.I | re.M)
             if pattern:
                 url = self.URL_PANTHER + pattern[1]
                 logging.debug("get "+url)
@@ -156,15 +158,19 @@ class creator:
         output = ''
         if self.db_uniprot:
             # create reports from external data
+            logging.info('create reports from external data...')
             corum_json = None
             panther_txt = None
             if os.path.isfile(self.db_corum):
                 with open(self.db_corum, 'r') as f:
                     corum_json = json.load(f)
+            logging.debug('corum done')
             if os.path.isfile(self.db_panther):
                 with open(self.db_panther, 'r') as f:
                     panther_txt = f.read()
+            logging.debug('panther done')
             # Extract the info from the main database (UniProt), if apply
+            logging.info('extract the info from the main database...')
             for record in SwissProt.parse( open(self.db_uniprot) ):
                 prot_acc = record.accessions[0]
                 if prot_acc in ids:
@@ -202,12 +208,16 @@ class creator:
         Parse the raw database file
         '''            
         out = id+'|'
-        record = REST.kegg_get(id).read()
-        if record:
-            pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
-            out += pattern[1] if pattern else ''
-            pattern = re.search(r'PATHWAY\s*([^\n]*)', record, re.I | re.M)
-            out += ";"+pattern[1] if pattern else ''
+        try:
+            record = REST.kegg_get(id).read()
+            if record:
+                pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
+                out += pattern[1] if pattern else ''
+                pattern = re.search(r'PATHWAY\s*([^\n]*)', record, re.I | re.M)
+                out += ";"+pattern[1] if pattern else ''
+            pass
+        except:
+            pass
         return out
 
     def _extract_cat_corum(self, id, allComp):

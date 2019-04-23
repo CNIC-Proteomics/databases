@@ -5,13 +5,20 @@ import argparse, logging, os, sys
 import db
 
 __author__ = 'jmrodriguezc'
+__credits__ = ["Jose Rodriguez", "Jesus Vazquez"]
+__license__ = "Creative Commons Attribution-NonCommercial-NoDerivs 4.0 Unported License https://creativecommons.org/licenses/by-nc-nd/4.0/"
+__version__ = "0.0.1"
+__maintainer__ = "Jose Rodriguez"
+__email__ = "jmrodriguezc@cnic.es"
+__status__ = "Development"
+
 
 def main(args):
     ''' Main function'''
 
     # check input parameters
-    if args.infasta and not args.regex:
-        sys.exit("The input database and the regular expression parameters have to be together")
+    # if args.infasta and not args.regex:
+    #     sys.exit("The input database and the regular expression parameters have to be together")
         
     logging.info("create db_creator object")
     w = db.creator(args.species, args.outdir, args.infasta, args.filt)
