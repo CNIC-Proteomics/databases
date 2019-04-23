@@ -2,18 +2,18 @@
 
 ### Requirements:
 Python3 and the following Python packages:
-sys
-os
-logging
-urllib.request
-datetime
-re
-zipfile
-json
-from Bio import SwissProt
-from Bio import SeqIO
-from Bio.KEGG import REST
-from Bio.KEGG import Enzyme
+- sys
+- os
+- logging
+- urllib.request
+- datetime
+- re
+- zipfile
+- json
+- from Bio import SwissProt
+- from Bio import SeqIO
+- from Bio.KEGG import REST
+- from Bio.KEGG import Enzyme
 
 
 ## Executions
