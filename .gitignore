@@ -1,7 +1,5 @@
 # Test folder
 test
-logs/*
-tmp/*
 
 # Python cache
 src/lib/__pycache__
