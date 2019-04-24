@@ -32,6 +32,11 @@ python src/create_db_sb.py -s human   -i test/test.fa  -o test/human -vv
 python src/create_db_sb.py -s human   -i test/test.fa  -r '[^\|]*\|([^\|]*)\|' -o test/human -vv 
 ```
 
+Add into the crontab
+```bash
+crontab crontab/crontab_db_sb.sh
+```
+
 # DecoyPYrat.v2 - Fast Hybrid Decoy Sequence Database Creation for Proteomic Mass Spectromtery Analyses
 
 Improvement on DecoyPYrat script from Sanger (https://www.sanger.ac.uk/science/tools/decoypyrat)

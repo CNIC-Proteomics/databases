@@ -10,15 +10,6 @@ from Bio.KEGG import REST
 from Bio.KEGG import Enzyme
 
 
-__author__ = 'jmrodriguezc'
-__credits__ = ["Jose Rodriguez", "Jesus Vazquez"]
-__license__ = "Creative Commons Attribution-NonCommercial-NoDerivs 4.0 Unported License https://creativecommons.org/licenses/by-nc-nd/4.0/"
-__version__ = "0.0.1"
-__maintainer__ = "Jose Rodriguez"
-__email__ = "jmrodriguezc@cnic.es"
-__status__ = "Development"
-
-
 class creator:
     URL_UNIPROT = 'https://www.uniprot.org/uniprot/?'
     URL_CORUM   = 'http://mips.helmholtz-muenchen.de/corum/download/allComplexes.json.zip'
@@ -58,7 +49,7 @@ class creator:
             sys.exit( "ERROR: Species parameter has been not found. Try with: "+", ".join(self.SPECIES_LIST.keys()) )
         
         # create output directory if does not exist
-        self.outdir = o +'/'+ self.TIME
+        self.outdir = o
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir, exist_ok=True)
         # create temporal file

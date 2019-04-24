@@ -1,7 +1,5 @@
 #!/usr/bin/python
-
-import argparse, logging, os, sys
-
+import sys, argparse, logging
 import db
 
 __author__ = 'jmrodriguezc'
@@ -15,7 +13,7 @@ __status__ = "Development"
 
 def main(args):
     ''' Main function'''
-
+    
     # check input parameters
     # if args.infasta and not args.regex:
     #     sys.exit("The input database and the regular expression parameters have to be together")
@@ -31,8 +29,6 @@ def main(args):
 
     logging.info("extract categories by "+ args.type)
     output = w.extract_categories(ids, args.type)
-
-    # # 2. REMOVE DUPLICATIONS
 
     logging.info('print database file')
     w.to_file(output)
