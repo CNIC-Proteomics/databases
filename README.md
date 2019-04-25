@@ -44,7 +44,7 @@ Improvement on DecoyPYrat script from Sanger (https://www.sanger.ac.uk/science/t
 ## Execution
 
 ```bash
-python src/decoyPYrat.v2.py  --output_fasta test/uniprot_MusMusculus_dic2016.decoy.fasta  test/uniprot_MusMusculus_dic2016.fasta
+python src/decoyPYrat.v2.py  --output_fasta test/uniprot_MusMusculus_dic2016.decoy.fasta  --decoy_prefix=DECOY test/uniprot_MusMusculus_dic2016.fasta
 
 cat uniprot_MusMusculus_dic2016.target.fa uniprot_MusMusculus_dic2016.decoy.fasta > uniprot_MusMusculus_dic2016.target-decoy.fa
 ```

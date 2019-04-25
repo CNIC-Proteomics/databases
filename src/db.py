@@ -61,8 +61,8 @@ class creator:
             self.db_fasta = i
             self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
         else:
-            self.outfname = species +'_'+ self.proteome_id +'_'+ self.TIME
-            self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'
+            self.outfname = species +'_'+ self.proteome_id +'_'+ f +'.'+ self.TIME if f else ''
+            self.db_fasta = self.outdir +'/'+ self.outfname +'.fa'
             self.download_fasta_db(self.db_fasta, f)
         # create data files
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
@@ -80,6 +80,19 @@ class creator:
                 os.remove(os.path.join(dir, f))
             except Exception as e:
                 logging.error(e)
+
+    def download_fasta_db(self, outfile, filt):
+        '''
+        Download the fasta database file
+        '''
+        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id        
+        if filt and filt == "sw": # filter by SwissProt
+            url += '%20reviewed:yes'
+        elif filt and filt == "tr": # filter by TrEMBL
+            url += '%20reviewed:no'
+        url += '&format=fasta'
+        logging.debug('get '+url)
+        urllib.request.urlretrieve(url, outfile)
 
     def download_raw_dbs(self, filt):
         '''
@@ -117,18 +130,6 @@ class creator:
                 logging.debug("get "+url)
                 urllib.request.urlretrieve(url, self.db_panther)
         
-
-    def download_fasta_db(self, outfile, filt):
-        '''
-        Download the fasta database file
-        '''
-        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id        
-        if filt and filt == "sw": # filter by SwissProt
-            url += '%20reviewed:yes'
-        url += '&format=fasta'
-        logging.debug('get '+url)
-        urllib.request.urlretrieve(url, outfile)
-
     def extract_identifiers(self, regex):
         '''
         Extract the identifiers from the FASTA file

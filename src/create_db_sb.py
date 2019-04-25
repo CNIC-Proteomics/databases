@@ -50,7 +50,7 @@ Examples:
     parser.add_argument('-i',  '--infasta', help='Input database (as FASTA format)')
     parser.add_argument('-r',  '--regex',  help='Regular expression to extract the ID (protein or gene) from the comment of FASTA input file')
     parser.add_argument('-t',  '--type',  default="protein", choices=["protein","gene"], help='Directory where the database will be saved')
-    parser.add_argument('-f',  '--filt',  default="no", choices=["no","sw+tr","sw","tr"], help='Directory where the database will be saved')    
+    parser.add_argument('-f',  '--filt',  default="sw-tr", choices=["sw-tr","sw","tr"], help='Directory where the database will be saved')    
     parser.add_argument('-o',  '--outdir', required=True, help='Directory where the database will be saved')
     parser.add_argument('-v', dest='verbose', action='store_true', help="Increase output verbosity")
     args = parser.parse_args()
