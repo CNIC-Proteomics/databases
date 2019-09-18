@@ -70,8 +70,6 @@ class creator:
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
         # create output file
         self.outfile = self.outdir +'/'+ self.outfname +'.tsv'
-        # delete any temporal file
-        self._delete_tmp_dir(self.TMP_DIR)
 
     def _delete_tmp_dir(self, dir):
         files = [ f for f in os.listdir(dir) ]
@@ -98,6 +96,8 @@ class creator:
         '''
         Download the raw databases
         '''
+        # delete any temporal file
+        self._delete_tmp_dir(self.TMP_DIR)
         # UniProt
         # filter by SwissProt (Reviewd) if apply
         url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
@@ -134,16 +134,18 @@ class creator:
         '''
         Extract the identifiers from the FASTA file
         '''
-        ids = []
+        ids,dsc = [],[]
         pattern = regex if regex else '[^\|]*\|([^\|]*)\|' # by default is UniProt
         records = SeqIO.parse(self.db_fasta, "fasta")
         for record in records:
             match = re.search(pattern, record.description, re.I | re.M)
             if match:
+                i = ">"+record.description
                 ids.append(match[1])
-        return ids
+                dsc.append(i)
+        return [ids,dsc]
         
-    def extract_categories(self, ids, type):
+    def extract_categories(self, in_ids, in_dsc, type, comm):
         '''
         Parse the raw database file
         '''
@@ -165,7 +167,7 @@ class creator:
             logging.info('extract the info from the main database...')
             for record in SwissProt.parse( open(self.db_uniprot) ):
                 prot_acc = record.accessions[0]
-                if prot_acc in ids:
+                if prot_acc in in_ids:
                     prot_accs = ";".join(record.accessions[1:])
                     pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
                     gene_name = pattern[1] if pattern else record.gene_name         
@@ -177,7 +179,11 @@ class creator:
                         id = gene_name
                     else:
                         id = prot_acc
-                    main_columns = id
+                    # get the id as description or identifier
+                    if comm:
+                        main_columns = in_dsc[in_ids.index(prot_acc)]
+                    else:
+                        main_columns = id
                     # save cross references
                     for reference in record.cross_references:
                         extdb = reference[0]

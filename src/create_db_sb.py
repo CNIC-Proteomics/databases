@@ -21,14 +21,14 @@ def main(args):
     logging.info("create db_creator object")
     w = db.creator(args.species, args.outdir, args.infasta, args.filt)
 
-    logging.info("extract list of identifiers")
-    ids = w.extract_identifiers(args.regex)
+    # logging.info("download raw file")
+    # w.download_raw_dbs(args.filt)
 
-    logging.info("download raw file")
-    w.download_raw_dbs(args.filt)
+    logging.info("extract list of identifiers")
+    ids,dsc = w.extract_identifiers(args.regex)
 
     logging.info("extract categories by "+ args.type)
-    output = w.extract_categories(ids, args.type)
+    output = w.extract_categories(ids, dsc, args.type, args.comm)
 
     logging.info('print database file')
     w.to_file(output)
@@ -48,7 +48,8 @@ Examples:
         formatter_class=CustomFormatter )
     parser.add_argument('-s',  '--species', required=True, help='First filter based on the species name')
     parser.add_argument('-i',  '--infasta', help='Input database (as FASTA format)')
-    parser.add_argument('-r',  '--regex',  help='Regular expression to extract the ID (protein or gene) from the comment of FASTA input file')
+    parser.add_argument('-r',  '--regex', help='Regular expression to extract the ID (protein or gene) from the comment of FASTA input file. By default it is UniProt regular expression.')
+    parser.add_argument('-c',  '--comm',  default=True, help='If true (by default), we use the comment line as Hit_ID. If "false", we use the protein_id decided by the regular expression.')
     parser.add_argument('-t',  '--type',  default="protein", choices=["protein","gene"], help='Directory where the database will be saved')
     parser.add_argument('-f',  '--filt',  default="sw-tr", choices=["sw-tr","sw","tr"], help='Directory where the database will be saved')    
     parser.add_argument('-o',  '--outdir', required=True, help='Directory where the database will be saved')
