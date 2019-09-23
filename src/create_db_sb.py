@@ -21,17 +21,17 @@ def main(args):
     logging.info("create db_creator object")
     w = db.creator(args.species, args.outdir, args.infasta, args.filt)
 
-    # logging.info("download raw file")
-    # w.download_raw_dbs(args.filt)
+    logging.info("download raw file")
+    w.download_raw_dbs(args.filt)
 
     logging.info("extract list of identifiers")
     ids,dsc = w.extract_identifiers(args.regex)
 
     logging.info("extract categories by "+ args.type)
-    output = w.extract_categories(ids, dsc, args.type, args.comm)
+    output,output_old = w.extract_categories(ids, dsc, args.type, args.comm)
 
     logging.info('print database file')
-    w.to_file(output)
+    w.to_file(output, output_old)
 
 
 if __name__ == "__main__":

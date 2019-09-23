@@ -1,4 +1,4 @@
-# SCRIPTS FOR THE CREATION OF DATABASES IN THE PROTEOMIC UNIT OF CNIC
+# Scripts for the Databases in the Proteomics Unit of CNIC
 
 ### Requirements:
 Python3 and the following Python packages:

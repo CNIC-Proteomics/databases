@@ -53,7 +53,7 @@ class creator:
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir, exist_ok=True)
         # create temporal file
-        self.TMP_DIR = os.path.dirname(os.path.abspath(__file__)) + '/../tmp/'+ self.species
+        self.TMP_DIR = os.path.dirname(os.path.abspath(__file__)) +'/../tmp/'+ self.TIME +'/'+ self.species
         os.makedirs(self.TMP_DIR, exist_ok=True)
         logging.debug(self.TMP_DIR)
         # get/create the fasta sequences
@@ -68,8 +68,9 @@ class creator:
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
         self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
-        # create output file
-        self.outfile = self.outdir +'/'+ self.outfname +'.tsv'
+        # create output files
+        self.outfile_old = self.outdir +'/'+ self.outfname +'.cat_old.tsv'
+        self.outfile = self.outdir +'/'+ self.outfname +'.cat.tsv'
 
     def _delete_tmp_dir(self, dir):
         files = [ f for f in os.listdir(dir) ]
@@ -97,38 +98,48 @@ class creator:
         Download the raw databases
         '''
         # delete any temporal file
-        self._delete_tmp_dir(self.TMP_DIR)
+        # self._delete_tmp_dir(self.TMP_DIR)
+        
         # UniProt
         # filter by SwissProt (Reviewd) if apply
-        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
-        url = url +'&format=txt'
-        if filt and filt == "sw":
-            url += '%20reviewed:yes'
-        url += '&format=fasta'
-        logging.debug("get "+url)
-        urllib.request.urlretrieve(url, self.db_uniprot)
+        if not os.path.isfile(self.db_uniprot):
+            url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
+            url = url +'&format=txt'
+            if filt and filt == "sw":
+                url += '%20reviewed:yes'
+            url += '&format=fasta'
+            logging.debug("get "+url)
+            urllib.request.urlretrieve(url, self.db_uniprot)
+        else:
+            logging.debug('cached uniprot')
         
         # CORUM
         # download all complexes file (using the same name)
         # unzip the file
-        url = self.URL_CORUM
-        db_dat = self.TMP_DIR +'/'+ os.path.basename(url)
-        logging.debug("get "+url)
-        urllib.request.urlretrieve(url, db_dat)
-        zip_ref = zipfile.ZipFile(db_dat, 'r')
-        zip_ref.extractall(self.TMP_DIR)
-        zip_ref.close()
+        if not os.path.isfile(self.db_corum):
+            url = self.URL_CORUM
+            db_dat = self.TMP_DIR +'/'+ os.path.basename(url)
+            logging.debug("get "+url)
+            urllib.request.urlretrieve(url, db_dat)
+            zip_ref = zipfile.ZipFile(db_dat, 'r')
+            zip_ref.extractall(self.TMP_DIR)
+            zip_ref.close()
+        else:
+            logging.debug('cached corum')
         
         # PANTHER
         # get the list of species and extract the file name
-        url = self.URL_PANTHER
-        result = urllib.request.urlopen(url).read().decode('utf-8')
-        if result:
-            pattern = re.search(r'\s*(PTHR[^\_]*\_'+self.species+'\_)', result, re.I | re.M)
-            if pattern:
-                url = self.URL_PANTHER + pattern[1]
-                logging.debug("get "+url)
-                urllib.request.urlretrieve(url, self.db_panther)
+        if not os.path.isfile(self.db_panther):
+            url = self.URL_PANTHER
+            result = urllib.request.urlopen(url).read().decode('utf-8')
+            if result:
+                pattern = re.search(r'\s*(PTHR[^\_]*\_'+self.species+'\_)', result, re.I | re.M)
+                if pattern:
+                    url = self.URL_PANTHER + pattern[1]
+                    logging.debug("get "+url)
+                    urllib.request.urlretrieve(url, self.db_panther)
+        else:
+            logging.debug('cached panther')
         
     def extract_identifiers(self, regex):
         '''
@@ -149,7 +160,7 @@ class creator:
         '''
         Parse the raw database file
         '''
-        output = ''
+        output,output_old = '',''
         if self.db_uniprot:
             # create reports from external data
             logging.info('create reports from external data...')
@@ -198,8 +209,9 @@ class creator:
                             elif extdb == "PANTHER":
                                 extdesc = self._extract_cat_panther(id, panther_txt)
                             if extdesc != '':
-                                output += extdesc +"\t"+ main_columns +"\n"
-        return output
+                                output     += extdesc +"\t"+ id +"\n"
+                                output_old += extdesc +"\t"+ in_dsc[in_ids.index(prot_acc)] +"\n"
+        return [output,output_old]
 
     def _extract_cat_kegg(self, id):
         '''
@@ -239,13 +251,17 @@ class creator:
             out += pattern[1]+'|'+pattern[2] if pattern else ''
         return out
 
-    def to_file(self, output):
+    def to_file(self, output, output_old):
         '''
         Print to file
         '''
         f = open(self.outfile, "w")
         f.write("\t".join(self.HEADER)+"\n")
         f.write(output)
+        f.close()
+        f = open(self.outfile_old, "w")
+        f.write("\t".join(self.HEADER)+"\n")
+        f.write(output_old)
         f.close()
 
 
