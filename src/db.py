@@ -23,6 +23,10 @@ class creator:
             'scientific': 'Mus musculus',
             'proteome': 'UP000000589'
         },
+        'rat': {
+            'scientific': 'Rattus norvegicus',
+            'proteome': 'UP000002494'
+        },
         'pig': {
             'scientific': 'Sus scrofa',
             'proteome': 'UP000008227'
@@ -61,15 +65,15 @@ class creator:
             self.db_fasta = i
             self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
         else:
-            self.outfname = species +'_'+ self.proteome_id +'_'+ f +'.'+ self.TIME if f else ''
-            self.db_fasta = self.outdir +'/'+ self.outfname +'.fa'
+            # self.outfname = species +'_'+ self.proteome_id +'_'+ f +'.'+ self.TIME if f else ''
+            self.outfname = species +'_'+ f if f else ''
+            self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'
             self.download_fasta_db(self.db_fasta, f)
         # create data files
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
         self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
         # create output files
-        self.outfile_old = self.outdir +'/'+ self.outfname +'.cat_old.tsv'
         self.outfile = self.outdir +'/'+ self.outfname +'.cat.tsv'
 
     def _delete_tmp_dir(self, dir):
@@ -209,9 +213,9 @@ class creator:
                             elif extdb == "PANTHER":
                                 extdesc = self._extract_cat_panther(id, panther_txt)
                             if extdesc != '':
-                                output     += extdesc +"\t"+ id +"\n"
-                                output_old += extdesc +"\t"+ in_dsc[in_ids.index(prot_acc)] +"\n"
-        return [output,output_old]
+                                # output     += extdesc +"\t"+ id +"\n"
+                                output += extdesc +"\t"+ in_dsc[in_ids.index(prot_acc)] +"\n"
+        return output
 
     def _extract_cat_kegg(self, id):
         '''
@@ -259,10 +263,4 @@ class creator:
         f.write("\t".join(self.HEADER)+"\n")
         f.write(output)
         f.close()
-        f = open(self.outfile_old, "w")
-        f.write("\t".join(self.HEADER)+"\n")
-        f.write(output_old)
-        f.close()
-
-
 

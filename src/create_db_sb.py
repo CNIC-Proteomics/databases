@@ -28,10 +28,10 @@ def main(args):
     ids,dsc = w.extract_identifiers(args.regex)
 
     logging.info("extract categories by "+ args.type)
-    output,output_old = w.extract_categories(ids, dsc, args.type, args.comm)
+    output = w.extract_categories(ids, dsc, args.type, args.comm)
 
     logging.info('print database file')
-    w.to_file(output, output_old)
+    w.to_file(output)
 
 
 if __name__ == "__main__":
