@@ -65,8 +65,9 @@ class creator:
             self.db_fasta = i
             self.outfname = ".".join(os.path.basename(i).split(".")[:-1])
         else:
-            # self.outfname = species +'_'+ self.proteome_id +'_'+ f +'.'+ self.TIME if f else ''
-            self.outfname = species +'_'+ f if f else ''
+            # self.outfname = species +'_'+ self.proteome_id +'_'+ f +'.'+ self.TIME if f else ''            
+            # self.outfname = species +'_'+ f if f else ''
+            self.outfname = species +'_'+ self.proteome_id +'_'+ self.TIME +'_'+ f if f else ''
             self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'
             self.download_fasta_db(self.db_fasta, f)
         # create data files
@@ -255,7 +256,7 @@ class creator:
             out += pattern[1]+'|'+pattern[2] if pattern else ''
         return out
 
-    def to_file(self, output, output_old):
+    def to_file(self, output):
         '''
         Print to file
         '''

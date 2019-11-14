@@ -129,7 +129,7 @@ dcount = 0;
 outfa = open(args.tout, 'w')	
 
 #open temporary target FASTA file
-outfat = open( (os.path.splitext(args.fasta)[0])+".target.fa", 'w')	
+outfat = open( (os.path.splitext(args.fasta)[0])+".target.fasta", 'w')	
 
 #Open FASTA file
 fastas = SeqIO.parse(open(args.fasta, 'r'),'fasta')
