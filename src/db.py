@@ -35,6 +35,10 @@ class creator:
         'rabbit': {
             'scientific': 'Oryctolagus cuniculus',
             'proteome': 'UP000001811'
+        },
+        'zebrafish': {
+            'scientific': 'Danio rerio',
+            'proteome': 'UP000000437'
         }
     }
     LIST_IDS = ['Name','IsoIDs','Accession','Accessions','Gene','Class','Species','Description']

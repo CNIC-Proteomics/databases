@@ -21,26 +21,29 @@ The following scripts, download the FASTA sequences from UniProt proteomes and c
 
 Only SwissProt data
 ```bash
-python src/create_db_sb.py -s human   -o databases -f sw -vv  &> logs/create_db_sb.human.log
-python src/create_db_sb.py -s mouse   -o databases -f sw -vv  &> logs/create_db_sb.mouse.log
-python src/create_db_sb.py -s pig     -o databases -f sw -vv  &> logs/create_db_sb.pig.log
-python src/create_db_sb.py -s rabbit  -o databases -f sw -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s human      -o databases -f sw -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse      -o databases -f sw -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig        -o databases -f sw -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit     -o databases -f sw -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s zebrafish  -o databases -f sw -vv  &> logs/create_db_sb.zebrafish.log
 ```
 
 With SwissProt+TrEMBL
 ```bash
-python src/create_db_sb.py -s human   -o databases -vv  &> logs/create_db_sb.human.log
-python src/create_db_sb.py -s mouse   -o databases -vv  &> logs/create_db_sb.mouse.log
-python src/create_db_sb.py -s pig     -o databases -vv  &> logs/create_db_sb.pig.log
-python src/create_db_sb.py -s rabbit  -o databases -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s human      -o databases -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse      -o databases -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig        -o databases -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit     -o databases -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s zebrafish  -o databases -vv  &> logs/create_db_sb.zebrafish.log
 ```
 
 Remove duplicated sequences in the FASTA file based on the sorted id's
 ```bash
-python src/create_db_sb.py -s human   -o databases -f sw -d -vv  &> logs/create_db_sb.human.log
-python src/create_db_sb.py -s mouse   -o databases -f sw -d -vv  &> logs/create_db_sb.mouse.log
-python src/create_db_sb.py -s pig     -o databases -f sw -d -vv  &> logs/create_db_sb.pig.log
-python src/create_db_sb.py -s rabbit  -o databases -f sw -d -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s human      -o databases -d -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse      -o databases -d -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig        -o databases -d -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit     -o databases -d -vv  &> logs/create_db_sb.rabbit.log
+python src/create_db_sb.py -s zebrafish  -o databases -d -vv  &> logs/create_db_sb.zebrafish.log
 ```
 
 

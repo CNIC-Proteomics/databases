@@ -19,7 +19,7 @@ mkdir "${LOGDIR}"
 
 # for the following species...
 # create the System biology database
-SPECIES_LIST=(human mouse rat pig rabbit)
+SPECIES_LIST=(human mouse rat pig rabbit zebrafish)
 for SPECIES in "${SPECIES_LIST[@]}"
 do
   TYPE_LIST=(sw-tr sw)
