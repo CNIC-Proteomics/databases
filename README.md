@@ -18,21 +18,31 @@ Python3 and the following Python packages:
 ## Executions
 
 The following scripts, download the FASTA sequences from UniProt proteomes and create a file with the system biology data for the given species:
-```bash
-python src/create_db_sb.py -s human   -o databases -vv  &> logs/create_db_sb.human.log
-python src/create_db_sb.py -s human   -o databases -f sw -vv  &> logs/create_db_sb.human.log
-python src/create_db_sb.py -s mouse   -o databases -vv  &> logs/create_db_sb.mouse.log
-python src/create_db_sb.py -s pig     -o databases -vv  &> logs/create_db_sb.pig.log
-python src/create_db_sb.py -s rabbit  -o databases -vv  &> logs/create_db_sb.rabbit.log
-```
 
-Only SwissProt data:
+Only SwissProt data
 ```bash
 python src/create_db_sb.py -s human   -o databases -f sw -vv  &> logs/create_db_sb.human.log
 python src/create_db_sb.py -s mouse   -o databases -f sw -vv  &> logs/create_db_sb.mouse.log
 python src/create_db_sb.py -s pig     -o databases -f sw -vv  &> logs/create_db_sb.pig.log
 python src/create_db_sb.py -s rabbit  -o databases -f sw -vv  &> logs/create_db_sb.rabbit.log
 ```
+
+With SwissProt+TrEMBL
+```bash
+python src/create_db_sb.py -s human   -o databases -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse   -o databases -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig     -o databases -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit  -o databases -vv  &> logs/create_db_sb.rabbit.log
+```
+
+Remove duplicated sequences in the FASTA file based on the sorted id's
+```bash
+python src/create_db_sb.py -s human   -o databases -f sw -d -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse   -o databases -f sw -d -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig     -o databases -f sw -d -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit  -o databases -f sw -d -vv  &> logs/create_db_sb.rabbit.log
+```
+
 
 Add into the crontab
 ```bash
