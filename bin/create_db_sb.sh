@@ -16,18 +16,21 @@ run_cmd () {
 
 # prepare workspaces
 mkdir "${LOGDIR}"
-mkdir "${WSDIR}"
 
 # for the following species...
 # create the System biology database
 SPECIES_LIST=(human mouse rat pig rabbit)
 for SPECIES in "${SPECIES_LIST[@]}"
 do
+  TYPE_LIST=(sw-tr sw)
+  for TYPE in "${TYPE_LIST[@]}"
+  do
     # get local variables
-    LOGFILE="${LOGDIR}/create_db_sb.${SPECIES}.log"
+    LOGFILE="${LOGDIR}/create_db_sb.${SPECIES}-${TYPE}.log"
     # execute commands
-    CMD="time python '${CODEDIR}/src/create_db_sb.py' -s ${SPECIES} -o '${OUTDIR}' -vv  &> '${LOGFILE}' "
+    CMD="time python '${CODEDIR}/src/create_db_sb.py' -s ${SPECIES} -f ${TYPE} -o '${OUTDIR}' -vv  &> '${LOGFILE}' "
     run_cmd "${CMD}"
+  done
 done
 
 # for the following species...
@@ -46,7 +49,12 @@ do
     run_cmd "${CMD}"
 done
 
-# Delete the last version and copy the new version to the folder
-rm -rf "${WSDIR}/*"
-cp -rp "${OUTDIR}/." "${WSDIR}/."
+# Delete the last version
+mv  "${WSDIR}"  "BAKbefore_${DATE}"
+
+# prepare workspaces
+mkdir "${WSDIR}"
+
+# Copy the new version to the folder
+cp -r "${OUTDIR}/." "${WSDIR}/."
 
