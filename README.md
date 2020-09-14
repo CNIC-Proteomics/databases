@@ -13,23 +13,25 @@ Python3 and the following Python packages:
 - from Bio import SwissProt
 - from Bio import SeqIO
 - from Bio.KEGG import REST
-- from Bio.KEGG import Enzyme
 
 
 ## Executions
 
-The following scripts, download the FASTA sequences from UniProt proteomes and create the system biology database for the given species:
+The following scripts, download the FASTA sequences from UniProt proteomes and create a file with the system biology data for the given species:
 ```bash
 python src/create_db_sb.py -s human   -o databases -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s human   -o databases -f sw -vv  &> logs/create_db_sb.human.log
 python src/create_db_sb.py -s mouse   -o databases -vv  &> logs/create_db_sb.mouse.log
 python src/create_db_sb.py -s pig     -o databases -vv  &> logs/create_db_sb.pig.log
 python src/create_db_sb.py -s rabbit  -o databases -vv  &> logs/create_db_sb.rabbit.log
 ```
 
-Create the system biology database from the given FASTA sequence:
+Only SwissProt data:
 ```bash
-python src/create_db_sb.py -s human   -i test/test.fa  -o test/human -vv 
-python src/create_db_sb.py -s human   -i test/test.fa  -r '[^\|]*\|([^\|]*)\|' -o test/human -vv 
+python src/create_db_sb.py -s human   -o databases -f sw -vv  &> logs/create_db_sb.human.log
+python src/create_db_sb.py -s mouse   -o databases -f sw -vv  &> logs/create_db_sb.mouse.log
+python src/create_db_sb.py -s pig     -o databases -f sw -vv  &> logs/create_db_sb.pig.log
+python src/create_db_sb.py -s rabbit  -o databases -f sw -vv  &> logs/create_db_sb.rabbit.log
 ```
 
 Add into the crontab
