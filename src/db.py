@@ -44,14 +44,14 @@ class creator:
         }
     }
     # Column name with the cross-reference id
-    XID = 'xref_UniProt_Acc'
+    XID = 'Isoform'
     # Meta terms of isoform
-    META = ['xref_UniProt_Name','xref_UniProt_Acc','xref_HGNC_Gene','prot_UniProt_Class','prot_Species','prot_UniProt_Description']
+    META = ['xref_UniProt_Name','Isoform','Gene','prot_UniProt_Class','prot_Species','Description']
     # Xreferences terms of isoform
     XTERMS = [
-        ('Ensembl',  [('xref_Ensembl_protId','(ENS\w*P\d+[.]?\d*)'),('xref_Ensembl_transcId','(ENS\w*T\d+[.]?\d*)'),('xref_Ensembl_GeneId','(ENS\w*G\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
-        ('RefSeq',   [('xref_RefSeq_protId','(NP_\d+[.]?\d*)'),('xref_RefSeq_transcId','(NM_\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
-        ('CCDS',     [('xref_CCDS','(CCDS\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
+        ('Ensembl',  [('xref_Ensembl_protId','(ENS\w*P\d+[.]?\d*)'),('xref_Ensembl_transcId','(ENS\w*T\d+[.]?\d*)'),('xref_Ensembl_GeneId','(ENS\w*G\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
+        ('RefSeq',   [('xref_RefSeq_protId','(NP_\d+[.]?\d*)'),('xref_RefSeq_transcId','(NM_\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
+        ('CCDS',     [('xref_CCDS','(CCDS\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
     ]
     # Category terms of isoform
     CTERMS = [
@@ -62,7 +62,7 @@ class creator:
         ('CORUM',    [('cat_CORUM','')]),
         ('DrugBank', [('cat_DrugBank','')])
     ]
-    HEADERS = [ h for h in META] + [ h[0] for i in XTERMS for h in i[1] if h[0] != 'xref_UniProt_Acc' ] + [ h[0] for i in CTERMS for h in i[1] if h[0] != 'xref_UniProt_Acc' ]
+    HEADERS = [ h for h in META] + [ h[0] for i in XTERMS for h in i[1] if h[0] != 'Isoform' ] + [ h[0] for i in CTERMS for h in i[1] if h[0] != 'xref_UniProt_Acc' ]
     TIME = datetime.datetime.now().strftime("%Y%m")
 
     '''
