@@ -19,11 +19,11 @@ mkdir "${LOGDIR}"
 
 # for the following species...
 # create the System biology database
-SPECIES_LIST=(human mouse rat pig rabbit zebrafish)
-for SPECIES in "${SPECIES_LIST[@]}"
+TYPE_LIST=(sw sw-tr)
+for TYPE in "${TYPE_LIST[@]}"
 do
-  TYPE_LIST=(sw-tr sw)
-  for TYPE in "${TYPE_LIST[@]}"
+  SPECIES_LIST=(human mouse rat pig rabbit zebrafish)
+  for SPECIES in "${SPECIES_LIST[@]}"
   do
     # get local variables
     LOGFILE="${LOGDIR}/create_db_sb.${SPECIES}-${TYPE}.log"

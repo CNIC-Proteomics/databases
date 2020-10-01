@@ -4,6 +4,8 @@ import datetime
 import re
 import zipfile
 import json
+import pandas as pd
+import numpy as np
 from Bio import SwissProt
 from Bio import SeqIO
 from Bio.KEGG import REST
@@ -41,9 +43,26 @@ class creator:
             'proteome': 'UP000000437'
         }
     }
-    LIST_IDS = ['Name','IsoIDs','Accession','Accessions','Gene','Class','Species','Description']
-    LIST_TERMS = ['Ensembl','RefSeq','CCDS','GO','KEGG','PANTHER','Reactome','CORUM','DrugBank']
-    HEADER = ['Category','Hit']
+    # Column name with the cross-reference id
+    XID = 'xref_UniProt_Acc'
+    # Meta terms of isoform
+    META = ['xref_UniProt_Name','xref_UniProt_Acc','xref_HGNC_Gene','prot_UniProt_Class','prot_Species','prot_UniProt_Description']
+    # Xreferences terms of isoform
+    XTERMS = [
+        ('Ensembl',  [('xref_Ensembl_protId','(ENS\w*P\d+[.]?\d*)'),('xref_Ensembl_transcId','(ENS\w*T\d+[.]?\d*)'),('xref_Ensembl_GeneId','(ENS\w*G\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
+        ('RefSeq',   [('xref_RefSeq_protId','(NP_\d+[.]?\d*)'),('xref_RefSeq_transcId','(NM_\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
+        ('CCDS',     [('xref_CCDS','(CCDS\d+[.]?\d*)'),('xref_UniProt_Acc','\[([^\]]*)\]')]),
+    ]
+    # Category terms of isoform
+    CTERMS = [
+        ('GO',       [('cat_GO_C','^C:'),('cat_GO_F','^F:'),('cat_GO_P','^P:')]),
+        ('KEGG',     [('cat_KEGG','')]),
+        ('PANTHER',  [('cat_PANTHER','')]),
+        ('Reactome', [('cat_Reactome','')]),
+        ('CORUM',    [('cat_CORUM','')]),
+        ('DrugBank', [('cat_DrugBank','')])
+    ]
+    HEADERS = [ h for h in META] + [ h[0] for i in XTERMS for h in i[1] if h[0] != 'xref_UniProt_Acc' ] + [ h[0] for i in CTERMS for h in i[1] if h[0] != 'xref_UniProt_Acc' ]
     TIME = datetime.datetime.now().strftime("%Y%m")
 
     '''
@@ -71,7 +90,7 @@ class creator:
         
         # download sequences from UniProt
         self.outfname = species +'_'+ self.proteome_id +'_'+ self.TIME +'_'+ f if f else ''
-        self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'        
+        self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'                
         self._download_fasta_db(self.db_fasta, f)
         
         # remove duplicate sequences
@@ -192,9 +211,11 @@ class creator:
         '''
         Create protein report
         '''
-        output = ''
+        # declare output dataframe
+        df = pd.DataFrame()
+        
         if self.db_uniprot:
-            # create reports from external data
+            # create reports from external data ---
             logging.info('create reports from external data...')
             corum_json = None
             panther_txt = None
@@ -206,18 +227,17 @@ class creator:
                 with open(self.db_panther, 'r') as f:
                     panther_txt = f.read()
             logging.debug('panther done')
-
+            
+            
             # Extract the info from the main database (UniProt), if apply
             # create cross-references data
             logging.info('create cross-references data from UniProtKB database...')
             for record in SwissProt.parse( open(self.db_uniprot) ):
-                # local variable
-                outs = dict()
                 
                 # extract main info ---
                 name = record.entry_name
                 acc = record.accessions[0]
-                accs = ";".join(record.accessions[1:])
+                # accs = ";".join(record.accessions[1:])
                 pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
                 gene = pattern[1] if pattern else record.gene_name  
                 pattern = re.search(r'[RecName|SubName]: Full=([^\;|\{]*)', record.description, re.I | re.M)
@@ -228,173 +248,337 @@ class creator:
                 # extract isoforms IDs
                 comm = [c for c in record.comments if 'ALTERNATIVE PRODUCTS:' in c]
                 if comm:
-                    IsoIds = re.findall(r'IsoId=([^\;]*)\;', comm[0], re.I | re.M | re.DOTALL)
-                    IsoIds = ";".join(IsoIds)
+                    IsoIds = re.findall(r'IsoId=([^\;|\,]*)', comm[0], re.I | re.M | re.DOTALL)
                     # delete *-1 prefix from isoform Ids
-                    IsoIds = re.sub(rf"{acc}-1",f"{acc}", IsoIds)
+                    IsoIds = [ i.replace('-1','') for i in IsoIds ]
                 else:
-                    IsoIds = acc
-                # save to out report
-                outs['Name']        = name
-                outs['IsoIDs']      = IsoIds
-                outs['Accession']   = acc
-                outs['Accessions']  = accs
-                outs['Gene'] = gene
-                outs['Class'] = dclass
-                outs['Species'] = species
-                outs['Description'] = dsc
-
+                    IsoIds = [acc]
+                
+                # create a dataframe with the Metadata information ---
+                # UniProt accesion isoform is the index
+                df1 = pd.DataFrame(columns=self.META, data=[[name,IsoIds,gene,dclass,species,dsc]])
+                df1 = df1.explode(self.XID)
+                df1.set_index(self.XID, inplace=True)
+                
+                
                 # create cross-references data ---
                 # filter by given list of terms
-                xs = [x for x in record.cross_references if x[0] in self.LIST_TERMS]
-                # create dictionary with the common Xreferences
-                xrefs = dict()
-                for xref in xs:
-                    xrefs.setdefault(xref[0], []).append(xref[1:])
-                # convert the xref data to plain text in one line
-                for extdb,xref in xrefs.items():
-                    extdesc = ''
-                    if extdb == "Ensembl" or extdb == "RefSeq" or extdb == "CCDS":
-                        extdesc = self._extract_xref_ids(xref, acc)
-                    elif extdb == "GO":
-                        extdesc = self._extract_cat_go(xref)
-                    elif extdb == "KEGG": # remote access
-                        extdesc = self._extract_cat_kegg(xref)
-                    elif extdb == "PANTHER":
-                        extdesc = self._extract_cat_panther(panther_txt, xref, acc)
-                    elif extdb == "Reactome":
-                        extdesc = self._extract_cat_reactome(xref)
-                    elif extdb == "CORUM":
-                        extdesc = self._extract_cat_corum(corum_json, acc)
-                    elif extdb == "DrugBank":
-                        extdesc = self._extract_cat_drugbank(xref)
-                    if extdesc != '':
-                        # replace bad characters
-                        extdesc = extdesc.replace("\t"," ")
-                        extdesc = extdesc.replace('–','-')
-                        # delete *-1 prefix from isoform Ids
-                        extdesc = re.sub(rf"\[{acc}-1\]",f"[{acc}]", extdesc)
-                    # save to out report
-                    outs[extdb] = extdesc
+                # create dictionary with all common Xreferences
+                terms_dbs = [i[0] for i in self.XTERMS]
+                rs = [x for x in record.cross_references if x[0] in terms_dbs ]
+                rcross = dict()
+                for r in rs:
+                    rcross.setdefault(r[0], []).append(r[1:])
                 
-                # create the line of output text
-                output += "\t".join([outs[o] if o in outs else '' for o in self.LIST_IDS+self.LIST_TERMS])
-                output += "\n"
-        return output
-      
-          
-    def _extract_xref_ids(self, xref, acc):
+                
+                # extract the xreference data ---
+                for terms in self.XTERMS:
+                    xdb = terms[0]
+                    xpats = terms[1]
+                    xcols,xvals = [],[]
+                    if xdb in rcross:
+                        rconts = rcross[xdb]
+                        if   xdb == "Ensembl":
+                            (xcols, xvals) = self._extract_xref_ids(rconts, xpats, acc)
+                        elif xdb == "RefSeq":
+                            (xcols, xvals) = self._extract_xref_ids(rconts, xpats, acc)
+                        elif xdb == "CCDS":
+                            (xcols, xvals) = self._extract_xref_ids(rconts, xpats, acc)
+                    else:
+                        # create empty dict with the name of colum
+                        for xc,xv in xpats:
+                            xcols.append(xc)
+                            xvals.append([np.nan])
+                        xvals = list(map(list, zip(*xvals)))
+                    # create dataframe with the Xreferece information
+                    df2 = pd.DataFrame(columns=xcols, data=xvals)
+                    if not df2.dropna().empty:
+                        # check if UniProt accession does not exit
+                        # we add the given Isoforms ids
+                        if df2[self.XID].dropna().empty:
+                            df2[self.XID] = IsoIds                        
+                        df2.set_index(self.XID, inplace=True)
+                        # join using the index which is the UniProt accession of isoform
+                        df1 = df1.join(df2, how='outer')
+                
+                
+                # create cross-references data ---
+                # filter by given list of terms
+                # create dictionary with all common Xreferences
+                terms_dbs = [i[0] for i in self.CTERMS]
+                rs = [x for x in record.cross_references if x[0] in terms_dbs ]
+                rcross = dict()
+                for r in rs:
+                    rcross.setdefault(r[0], []).append(r[1:])
+
+                # extract the category data ---
+                for terms in self.CTERMS:
+                    xdb = terms[0]
+                    xpats = terms[1]
+                    xcols,xvals = [],[]
+                    if xdb in rcross:
+                        rconts = rcross[xdb]
+                        if xdb == "GO":
+                            (xcols, xvals) = self._extract_cat_go(rconts, xpats)
+                        elif xdb == "KEGG": # remote access
+                            (xcols, xvals) = self._extract_cat_kegg(rconts, xpats)
+                        elif xdb == "PANTHER":
+                            (xcols, xvals) = self._extract_cat_panther(panther_txt, rconts, xpats, acc)
+                        elif xdb == "Reactome":
+                            (xcols, xvals) = self._extract_cat_reactome(rconts, xpats)
+                        elif xdb == "CORUM":
+                            (xcols, xvals) = self._extract_cat_corum(corum_json, xpats, acc)
+                        elif xdb == "DrugBank":
+                            (xcols, xvals) = self._extract_cat_drugbank(rconts, xpats)
+                    else:
+                        # create empty dict with the name of colum
+                        for xc,xv in xpats:
+                            xcols.append(xc)
+                            xvals.append([np.nan])
+                        xvals = list(map(list, zip(*xvals)))
+                    # create dataframe with the Xreferece information
+                    df2 = pd.DataFrame(columns=xcols, data=xvals)
+                    if not df2.dropna().empty:
+                        # we add the given Isoforms ids
+                        dfx = pd.DataFrame(columns=[self.XID], data=IsoIds)
+                        df2 = pd.concat([df2,dfx],axis=1).ffill()
+                        df2.set_index(self.XID, inplace=True)
+                        # join using the index which is the UniProt accession of isoform
+                        df1 = df1.join(df2, how='outer')
+                        
+                
+                # concatenate isoforms information
+                df = pd.concat([df,df1])
+                
+                
+        return df
+    
+    def _extract_xref_ids(self, rconts, xpats, acc):
         '''
         Parse the xref data
         '''
-        out = ''
-        for x in xref:
-            id = x[0]
-            dsc = ''
-            for y in x[1:]:
-                m = re.search(rf"\[({acc}[^\]]*)\]\s*$", y, re.I | re.M)
-                if m:
-                    id += f"[{m[1]}]"
-                    y = re.sub(rf"\.\s*\[{acc}[^\]]*\]\s*",'', y)
-                dsc += f"{y}|"
-            dsc = re.sub(r'[-|\|]*\s*$','', dsc) # delete - or | at the end of string
-            out += f"{id}>{dsc};"
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            xp = xpat[1] # pattern
+            # extract the record value that achives the pattern
+            rcs = []
+            for rcont in rconts:
+                rc = [ re.findall(rf"{xp}", c) for c in rcont ]
+                rc = "".join([i for s in rc for i in s]) # list of list to str
+                # delete the last dot if apply
+                rc = re.sub(r'\.$','', rc) if rc.endswith('.') else rc
+                # exception
+                rc = rc.replace('-1', '') if xc == self.XID else rc
+                # only add values if exists
+                if rc != '':
+                    rcs.append(rc)
+            # create list of cols and values
+            if rcs:
+                xcols.append(xc)
+                xvals.append(rcs)
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_go(self, xref):
+    def _extract_cat_go(self, rconts, xpats):
         '''
         Parse the xref data
         '''
-        out = ''
-        for x in xref:
-            id = x[0]
-            dsc = "|".join(x[1:])
-            out += f"{id}>{dsc};"
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            xp = xpat[1] # pattern
+            # extract the record value that achives the pattern
+            rcs = []
+            for rcont in rconts:
+                rc = [ rcont for c in rcont if re.search(rf"{xp}", c) ]
+                if rc:
+                    rc = rc[0] # first elem of comprehension list
+                    rcs.append(rc)
+            # create list of cols and values
+            if rcs:
+                rcs = ";".join([f"{c[0]}>{c[1]}|{c[2]}" for c in rcs])
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_kegg(self, xref):
+    def _extract_cat_kegg(self, rconts, xpats):
         '''
         Parse the raw database file
         '''
-        out = ''
-        for x in xref:
-            id = x[0]
-            dsc = ''
-            try:
-                record = REST.kegg_get(id).read()
-                if record:
-                    pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
-                    dsc += pattern[1] if pattern else ''
-                    pattern = re.search(r'PATHWAY\s*([\w\W]*)MODULE', record, re.I | re.M)
-                    dsc += "|"+re.sub(r'\s*\n\s*','|', pattern[1]) if pattern else ''
-                pass
-            except:
-                pass
-            dsc = re.sub(r'[-|\|]*\s*$','', dsc) # delete - or | at the end of string
-            out += f"{id}>{dsc};"
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            # xp = xpat[1] # pattern
+            # extract the record value that achives the pattern
+            rcs = []
+            for rcont in rconts:
+                id = rcont[0]
+                rc = ''
+                try:
+                    record = REST.kegg_get(id).read()
+                    if record:
+                        pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
+                        rc += pattern[1] if pattern else ''
+                        pattern = re.search(r'PATHWAY\s*([\w\W]*)MODULE', record, re.I | re.M)
+                        rc += "|"+re.sub(r'\s*\n\s*','|', pattern[1]) if pattern else ''
+                        rc = re.sub(r'[-|\|]*\s*$','', rc) # delete - or | at the end of string
+                        rc = f"{id}>{rc}"
+                        rcs.append(rc)
+                    pass
+                except:
+                    pass
+            # create list of cols and values
+            if rcs:
+                rcs = ";".join(rcs)
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_panther(self, datatxt, xref, acc):
+    def _extract_cat_panther(self, datatxt, rconts, xpats, acc):
         '''
         Parse the raw database file
         '''
-        out = ''
-        if datatxt:
-            pattern = re.search(rf"UniProtKB={acc}\t*([^\t]*)\t*([^\t]*)", datatxt, re.I | re.M)
-            out += pattern[1]+'|'+pattern[2] if pattern else ''
-        if not datatxt or out == '':
-            out = ";".join([x[0] for x in xref])
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            # xp = xpat[1] # pattern
+            # extract the information from the given UniProt accession
+            rcs = ''
+            if datatxt:
+                pattern = re.search(rf"UniProtKB={acc}\t*([^\t]*)\t*([^\t]*)", datatxt, re.I | re.M)
+                rcs += f"{pattern[1]}>{pattern[2]}" if pattern else ''
+            # otherwise, we use the information from given records
+            if rcs == '':
+                rcs = ";".join([x[0] for x in rconts])
+            # create list of cols and values
+            if rcs != '':
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_reactome(self, xref):
+    def _extract_cat_reactome(self, rconts, xpats):
         '''
-        Parse the xref data
+        Parse the rcont data
         '''
-        out = ''
-        for x in xref:
-            id = x[0]
-            dsc = "|".join(x[1:])
-            out += f"{id}>{dsc};"
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            # xp = xpat[1] # pattern
+            # extract the record value that achives the pattern
+            rcs = []
+            for rcont in rconts:
+                id = rcont[0]
+                dsc = "|".join(rcont[1:])
+                rc = f"{id}>{dsc}"
+                rcs.append(rc)
+            # create list of cols and values
+            if rcs:
+                rcs = ";".join(rcs)
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_corum(self, datatxt, acc):
+    def _extract_cat_corum(self, datatxt, xpats, acc):
         '''
         Parse the raw database file
         '''
-        out = ''
-        if datatxt:
-            comps = list(filter(lambda person: acc in person['subunits(UniProt IDs)'], datatxt))
-            if comps:
-                out += ";".join([ 'compID_'+str(comp['ComplexID'])+'>'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            # xp = xpat[1] # pattern
+            # extract the information from the given UniProt accession
+            rcs = ''
+            if datatxt:
+                comps = list(filter(lambda person: acc in person['subunits(UniProt IDs)'], datatxt))
+                if comps:
+                    rcs += ";".join([ 'compID_'+str(comp['ComplexID'])+'>'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
+            # create list of cols and values
+            if rcs != '':
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
-    def _extract_cat_drugbank(self, xref):
+    def _extract_cat_drugbank(self, rconts, xpats):
         '''
-        Parse the xref data
+        Parse the rcont data
         '''
-        out = ''
-        for x in xref:
-            id = x[0]
-            dsc = "|".join(x[1:])
-            out += f"{id}>{dsc};"
-        out = re.sub(r'[>|;]*$','', out)# delete ; or > at the end of string
-        return out
+        xcols = []
+        xvals = []
+        # go through all columns of xterms
+        for xpat in xpats:
+            xc = xpat[0] # column name
+            # xp = xpat[1] # pattern
+            # extract the record value that achives the pattern
+            rcs = []
+            for rcont in rconts:
+                id = rcont[0]
+                dsc = "|".join(rcont[1:])
+                rc = f"{id}>{dsc}"
+                rcs.append(rc)
+            # create list of cols and values
+            if rcs:
+                rcs = ";".join(rcs)
+                xcols.append(xc)
+                xvals.append([rcs])
+            else:
+                xcols.append(xc)
+                xvals.append([np.nan])
+        # transpose list of lists
+        xvals = list(map(list, zip(*xvals)))
+        return (xcols, xvals)
 
 
-    def to_file(self, output):
+    def to_file(self, df):
         '''
         Print to file
         '''
-        f = open(self.outfile, "w")
-        # create header of output
-        header = "\t".join([o for o in self.LIST_IDS+self.LIST_TERMS])
-        header += "\n"
-        f.write(header)
-        f.write(output)
-        f.close()
-
+        df = df.reset_index()
+        # add NaN values to the columns that do not exits in the current dataframe
+        cols = df.columns.tolist()
+        diff_cols = list(set(self.HEADERS) - set(cols))
+        for c in diff_cols:
+            df[c] = np.nan
+        df.to_csv(self.outfile, sep="\t", index=False, columns=self.HEADERS)
+        

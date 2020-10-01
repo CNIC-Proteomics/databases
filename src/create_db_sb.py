@@ -20,7 +20,7 @@ def main(args):
     logging.info("download raw file")
     w.download_raw_dbs(args.filt)
 
-    # logging.info("create qreport")
+    logging.info("create qreport")
     output = w.create_qreport()
 
     logging.info('print database file')
