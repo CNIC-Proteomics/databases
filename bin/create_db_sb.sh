@@ -49,12 +49,12 @@ do
     run_cmd "${CMD}"
 done
 
-# Delete the last version
-mv  "${WSDIR}"  "BAKbefore_${DATE}"
+# # Delete the last version
+# mv  "${WSDIR}"  "BAKbefore_${DATE}"
 
-# prepare workspaces
-mkdir "${WSDIR}"
+# # prepare workspaces
+# mkdir "${WSDIR}"
 
-# Copy the new version to the folder
-cp -r "${OUTDIR}/." "${WSDIR}/."
+# # Copy the new version to the folder
+# cp -r "${OUTDIR}/." "${WSDIR}/."
 

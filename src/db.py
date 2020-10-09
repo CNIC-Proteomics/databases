@@ -89,7 +89,7 @@ class creator:
         logging.debug(self.TMP_DIR)
         
         # download sequences from UniProt
-        self.outfname = species +'_'+ self.proteome_id +'_'+ self.TIME +'_'+ f if f else ''
+        self.outfname = species +'_'+ self.TIME +'_'+ f if f else ''
         self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'                
         self._download_fasta_db(self.db_fasta, f)
         
