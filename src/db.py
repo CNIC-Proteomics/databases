@@ -16,7 +16,7 @@ class creator:
     URL_UNIPROT = 'https://www.uniprot.org/uniprot/?'
     URL_UNIPROT += 'include=yes&' # include all isoforms
     URL_CORUM   = 'http://mips.helmholtz-muenchen.de/corum/download/allComplexes.json.zip'
-    URL_PANTHER = 'ftp://ftp.pantherdb.org/sequence_classifications/current_release/PANTHER_Sequence_Classification_files/'
+    URL_PANTHER = 'https://data.pantherdb.org/ftp/sequence_classifications/current_release/PANTHER_Sequence_Classification_files/'
     SPECIES_LIST = {
         'human': {
             'scientific': 'Homo sapiens',
