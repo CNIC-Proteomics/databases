@@ -20,27 +20,33 @@ class creator:
     SPECIES_LIST = {
         'human': {
             'scientific': 'Homo sapiens',
-            'proteome': 'UP000005640'
+            'proteome': 'UP000005640',
+            'kegg_organism': 'hsa'
         },
         'mouse': {
             'scientific': 'Mus musculus',
-            'proteome': 'UP000000589'
+            'proteome': 'UP000000589',
+            'kegg_organism': 'mmu'
         },
         'rat': {
             'scientific': 'Rattus norvegicus',
-            'proteome': 'UP000002494'
+            'proteome': 'UP000002494',
+            'kegg_organism': 'rno'
         },
         'pig': {
             'scientific': 'Sus scrofa',
-            'proteome': 'UP000008227'
+            'proteome': 'UP000008227',
+            'kegg_organism': 'ssc'
         },
         'rabbit': {
             'scientific': 'Oryctolagus cuniculus',
-            'proteome': 'UP000001811'
+            'proteome': 'UP000001811',
+            'kegg_organism': 'ocu'
         },
         'zebrafish': {
             'scientific': 'Danio rerio',
-            'proteome': 'UP000000437'
+            'proteome': 'UP000000437',
+            'kegg_organism': 'dre'
         }
     }
     # Column name with the cross-reference id
@@ -75,6 +81,7 @@ class creator:
         if species in self.SPECIES_LIST:
             self.species = species
             self.proteome_id = self.SPECIES_LIST[self.species]['proteome']
+            self.kegg_id = self.SPECIES_LIST[self.species]['kegg_organism']
         else:
             sys.exit( "ERROR: Species parameter has been not found. Try with: "+", ".join(self.SPECIES_LIST.keys()) )
         
