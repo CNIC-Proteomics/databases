@@ -2,10 +2,12 @@ import sys, os, logging
 import urllib.request
 import datetime
 import re
-import zipfile
+import requests
+from concurrent.futures import ThreadPoolExecutor
 import json
 import pandas as pd
 import numpy as np
+import time
 from Bio import SwissProt
 from Bio import SeqIO
 from Bio.KEGG import REST
@@ -109,6 +111,7 @@ class creator:
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
         self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
+        self.db_kegg    = self.TMP_DIR +'/'+ self.outfname +'.kegg.dat'
         
         # create output files
         self.outfile = self.outdir +'/'+ self.outfname +'.categories.tsv'
@@ -164,6 +167,64 @@ class creator:
             with open(outfile, 'w') as handle:
                 SeqIO.write(records.values(), handle, 'fasta')
         return None
+    
+
+    def _fetch_kegg_batch(self, entries):
+        # check if all entries cached
+        uncached = []
+        batch_cache_files = {}
+        CACHE_DIR = os.path.join(self.TMP_DIR, "kegg_cache")
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        for e in entries:
+            f = os.path.join(CACHE_DIR, e.replace(":", "_") + ".txt")
+            batch_cache_files[e] = f
+            if not os.path.exists(f):
+                uncached.append(e)
+
+        # if all cached, load from disk
+        if len(uncached) == 0:
+            data = {}
+            for e, f in batch_cache_files.items():
+                with open(f) as fh:
+                    data[e] = fh.read()
+            return data
+
+        # otherwise download entries
+        query = "+".join(uncached)
+        time.sleep(0.25)
+        try:
+            raw = REST.kegg_get(query).read()
+        except Exception as exc:
+            print(f"[ERROR] Failed batch {uncached}: {exc}")
+            return {e: None for e in entries}
+        blocks = raw.strip().split("///")
+        result = {}
+        for block in blocks:
+            block = block.strip()
+            if not block:
+                continue
+            first_line = block.split("\n", 1)[0]
+            entry_id = self.kegg_id + ":" + first_line.split()[1]
+            f = batch_cache_files[entry_id]
+            with open(f, "w") as fh:
+                fh.write(block + "\n///\n")
+            result[entry_id] = block + "\n///\n"
+        # mark missing entries
+        for e in entries:
+            if e not in result:
+                result[e] = None
+        return result
+
+
+    def _download_kegg(self, db):
+        result = {}
+        batches = [db[i:i+10] for i in range(0, len(db), 10)] # 10 is max recommended batch size
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            for i, batch_entries in enumerate(batches):
+                print(f"Downloading batch {i+1}/{len(batches)}")
+                batch_result = ex.submit(self._fetch_kegg_batch, batch_entries).result()
+                result.update(batch_result)
+        return result
 
 
     def download_raw_dbs(self, filt):
@@ -212,6 +273,22 @@ class creator:
                     urllib.request.urlretrieve(url, self.db_panther)
         else:
             logging.debug('cached panther')
+
+        # KEGG
+        # download in batches
+        if not os.path.isfile(self.db_kegg):
+            db = REST.kegg_list(database=self.kegg_id).read()
+            db = [i.split("\t")[0] for i in db.split("\n")]
+            db = [i for i in db if i.startswith(self.db_kegg)]
+            result = self._download_kegg(db)
+            with open(self.db_kegg, "w") as out:
+                for e in db:
+                    if result[e]:
+                        out.write(result[e])
+                    else:
+                        sys.exit(f"# KEGG - FAILED TO RETRIEVE: {e}\n")
+        else:
+            logging.debug('cached kegg')
     
     
     def create_qreport(self):
