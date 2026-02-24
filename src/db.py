@@ -49,9 +49,9 @@ class creator:
     META = ['xref_UniProt_Name','Isoform','Gene','prot_UniProt_Class','prot_Species','Description']
     # Xreferences terms of isoform
     XTERMS = [
-        ('Ensembl',  [('xref_Ensembl_protId','(ENS\w*P\d+[.]?\d*)'),('xref_Ensembl_transcId','(ENS\w*T\d+[.]?\d*)'),('xref_Ensembl_GeneId','(ENS\w*G\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
-        ('RefSeq',   [('xref_RefSeq_protId','(NP_\d+[.]?\d*)'),('xref_RefSeq_transcId','(NM_\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
-        ('CCDS',     [('xref_CCDS','(CCDS\d+[.]?\d*)'),('Isoform','\[([^\]]*)\]')]),
+        ('Ensembl',  [('xref_Ensembl_protId',r'(ENS\w*P\d+[.]?\d*)'),('xref_Ensembl_transcId',r'(ENS\w*T\d+[.]?\d*)'),('xref_Ensembl_GeneId',r'(ENS\w*G\d+[.]?\d*)'),('Isoform',r'\[([^\]]*)\]')]),
+        ('RefSeq',   [('xref_RefSeq_protId',r'(NP_\d+[.]?\d*)'),('xref_RefSeq_transcId',r'(NM_\d+[.]?\d*)'),('Isoform',r'\[([^\]]*)\]')]),
+        ('CCDS',     [('xref_CCDS',r'(CCDS\d+[.]?\d*)'),('Isoform',r'\[([^\]]*)\]')]),
     ]
     # Category terms of isoform
     CTERMS = [
