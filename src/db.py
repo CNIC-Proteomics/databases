@@ -321,7 +321,7 @@ class creator:
             # create reports from external data ---
             logging.info('create reports from external data...')
             corum_json = None
-            panther_txt = None
+            panther_dict = None
             kegg_dict = None
             if os.path.isfile(self.db_corum):
                 with open(self.db_corum, 'r') as f:
@@ -329,7 +329,9 @@ class creator:
             logging.debug('corum done')
             if os.path.isfile(self.db_panther):
                 with open(self.db_panther, 'r') as f:
-                    panther_txt = f.read()
+                    panther_dict = f.read()
+                panther_dict = [i for i in panther_dict.split("\n")]
+                panther_dict = {re.split('UniProtKB=|\t', i)[1]: i for i in panther_dict[:-1]}
             logging.debug('panther done')
             if os.path.isfile(self.db_kegg):
                 with open(self.db_kegg, 'r') as f:
@@ -441,7 +443,7 @@ class creator:
                         elif xdb == "KEGG": # remote access
                             (xcols, xvals) = self._extract_cat_kegg(kegg_dict, rconts, xpats)
                         elif xdb == "PANTHER":
-                            (xcols, xvals) = self._extract_cat_panther(panther_txt, rconts, xpats, acc)
+                            (xcols, xvals) = self._extract_cat_panther(panther_dict, rconts, xpats, acc)
                         elif xdb == "Reactome":
                             (xcols, xvals) = self._extract_cat_reactome(rconts, xpats)
                         elif xdb == "CORUM":
@@ -573,7 +575,7 @@ class creator:
         xvals = list(map(list, zip(*xvals)))
         return (xcols, xvals)
 
-    def _extract_cat_panther(self, datatxt, rconts, xpats, acc):
+    def _extract_cat_panther(self, datadict, rconts, xpats, acc):
         '''
         Parse the raw database file
         '''
@@ -585,9 +587,11 @@ class creator:
             # xp = xpat[1] # pattern
             # extract the information from the given UniProt accession
             rcs = ''
-            if datatxt:
-                pattern = re.search(rf"UniProtKB={acc}\t*([^\t]*)\t*([^\t]*)", datatxt, re.I | re.M)
-                rcs += f"{pattern[1]}>{pattern[2]}" if pattern else ''
+            if datadict:
+                if acc in datadict:
+                    pattern = re.search(rf"UniProtKB={acc}\t*([^\t]*)\t*([^\t]*)", datadict[acc], re.I | re.M)
+                    rcs += f"{pattern[1]}>{pattern[2]}" if pattern else ''
+                else: rcs = ''
             # otherwise, we use the information from given records
             if rcs == '':
                 rcs = ";".join([x[0] for x in rconts])
