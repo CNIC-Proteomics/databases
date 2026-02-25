@@ -14,10 +14,15 @@ from Bio.KEGG import REST
 
 
 class creator:
-    # https://www.uniprot.org/uniprot/?query=proteome:up000005640&format=fasta&include=yes&fil=reviewed:yes
-    URL_UNIPROT = 'https://www.uniprot.org/uniprot/?'
-    URL_UNIPROT += 'include=yes&' # include all isoforms
     URL_CORUM   = 'http://mips.helmholtz-muenchen.de/corum/download/allComplexes.json.zip'
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    # https://www.uniprot.org/uniprot/?query=proteome:up000005640&format=fasta&include=yes&fil=reviewed:yes <- Deprecated
+    # https://rest.uniprot.org/uniprotkb/search?includeIsoform=true&query=proteome:UP000005640+AND+reviewed:true&format=fasta
+    URL_UNIPROT = 'https://rest.uniprot.org/uniprotkb/stream' # stream does not paginate, search does
+    URL_PARAMS_UNIPROT = {
+        "includeIsoform": "true",
+    }
+    # URL_UNIPROT += 'includeIsoform=true&' # include all isoforms
     URL_PANTHER = 'https://data.pantherdb.org/ftp/sequence_classifications/current_release/PANTHER_Sequence_Classification_files/'
     SPECIES_LIST = {
         'human': {
@@ -130,14 +135,21 @@ class creator:
         '''
         Download the fasta database file
         '''
-        url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id        
+        url = self.URL_UNIPROT
+        params = self.URL_PARAMS_UNIPROT
+        # +'query=proteome:'+ self.proteome_id      
         if filt and filt == "sw": # filter by SwissProt
-            url += '&fil=reviewed:yes'            
+            params['query'] = 'proteome:' + self.proteome_id + '+AND+reviewed:true'
+            #url += '+AND+reviewed:true'            
         elif filt and filt == "tr": # filter by TrEMBL
-            url += '&fil=reviewed:no'
-        url += '&format=fasta'
-        logging.debug('get '+url)
-        urllib.request.urlretrieve(url, outfile)
+            params['query'] = self.proteome_id + '+AND+reviewed:false'
+            #url += '+AND+reviewed:false'
+        params['format'] = 'fasta'
+        #url += '&format=fasta'
+        query_string = urllib.parse.urlencode(params, safe=":+")
+        full_url = f"{url}?{query_string}"
+        logging.debug('get '+full_url)
+        urllib.request.urlretrieve(full_url, outfile)
 
 
     def _remove_duplicates(self, infile, outfile=None):
@@ -237,12 +249,19 @@ class creator:
         # UniProt
         # filter by SwissProt (Reviewd) if apply
         if not os.path.isfile(self.db_uniprot):
-            url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
+            url = self.URL_UNIPROT
+            params = self.URL_PARAMS_UNIPROT
+            params['query'] = 'proteome:' + self.proteome_id
+            #url = self.URL_UNIPROT +'query=proteome:'+ self.proteome_id
             if filt and filt == "sw":
-                url += '&fil=reviewed:yes'
-            url += '&format=txt'
-            logging.debug("get "+url)
-            urllib.request.urlretrieve(url, self.db_uniprot)
+                params['query'] += '+AND+reviewed:true'
+                # url += '+AND+reviewed:true'
+            # url += '&format=txt'
+            params['format'] = 'txt'
+            query_string = urllib.parse.urlencode(params, safe=":+")
+            full_url = f"{url}?{query_string}"
+            logging.debug("get "+full_url)
+            urllib.request.urlretrieve(full_url, self.db_uniprot)
         else:
             logging.debug('cached uniprot')
         
@@ -328,8 +347,16 @@ class creator:
                 name = record.entry_name
                 acc = record.accessions[0]
                 # accs = ";".join(record.accessions[1:])
-                pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
-                gene = pattern[1] if pattern else record.gene_name  
+                # if len(record.gene_name)>1:
+                #     print(str(record.gene_name))
+                # pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
+                # gene = pattern[1] if pattern else record.gene_name
+                if record.gene_name:
+                    if 'Name' in record.gene_name[0]: gene = record.gene_name[0]['Name'].split(' ')[0] # Keep only the first name
+                    else: continue
+                #   elif 'ORFNames' in record.gene_name[0]: gene = "ORF_" + "_".join(record.gene_name[0]['ORFNames'])
+                # else:
+                #    gene = record.entry_name + "_NO_CANONICAL_GENE_NAME"
                 pattern = re.search(r'[RecName|SubName]: Full=([^\;|\{]*)', record.description, re.I | re.M)
                 dsc = pattern[1] if pattern else record.description
                 dclass = record.data_class
@@ -616,7 +643,8 @@ class creator:
             # extract the information from the given UniProt accession
             rcs = ''
             if datatxt:
-                comps = list(filter(lambda person: acc in person['subunits(UniProt IDs)'], datatxt))
+                # comps = list(filter(lambda person: acc in person['subunits(UniProt IDs)'], datatxt))
+                comps = list(filter(lambda person: acc in person['subunits'], datatxt))
                 if comps:
                     rcs += ";".join([ 'compID_'+str(comp['ComplexID'])+'>'+comp['ComplexName'] for comp in comps if 'ComplexID' in comp and 'ComplexName' in comp ])
             # create list of cols and values
