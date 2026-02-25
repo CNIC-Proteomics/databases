@@ -311,6 +311,12 @@ class creator:
                 with open(self.db_panther, 'r') as f:
                     panther_txt = f.read()
             logging.debug('panther done')
+            if os.path.isfile(self.db_kegg):
+                with open(self.db_kegg, 'r') as f:
+                    kegg_txt = f.read()
+                kegg_txt = [i for i in kegg_txt.split("///")]
+                kegg_txt = {self.kegg_id + ":" + i.split()[1]: i for i in kegg_txt[:-1]}
+            logging.debug('kegg done')
             
             
             # Extract the info from the main database (UniProt), if apply
