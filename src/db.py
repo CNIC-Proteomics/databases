@@ -322,6 +322,7 @@ class creator:
             logging.info('create reports from external data...')
             corum_json = None
             panther_txt = None
+            kegg_dict = None
             if os.path.isfile(self.db_corum):
                 with open(self.db_corum, 'r') as f:
                     corum_json = json.load(f)
@@ -332,9 +333,9 @@ class creator:
             logging.debug('panther done')
             if os.path.isfile(self.db_kegg):
                 with open(self.db_kegg, 'r') as f:
-                    kegg_txt = f.read()
-                kegg_txt = [i for i in kegg_txt.split("///")]
-                kegg_txt = {self.kegg_id + ":" + i.split()[1]: i for i in kegg_txt[:-1]}
+                    kegg_dict = f.read()
+                kegg_dict = [i for i in kegg_dict.split("///")]
+                kegg_dict = {self.kegg_id + ":" + i.split()[1]: i for i in kegg_dict[:-1]}
             logging.debug('kegg done')
             
             
@@ -438,7 +439,7 @@ class creator:
                         if xdb == "GO":
                             (xcols, xvals) = self._extract_cat_go(rconts, xpats)
                         elif xdb == "KEGG": # remote access
-                            (xcols, xvals) = self._extract_cat_kegg(rconts, xpats)
+                            (xcols, xvals) = self._extract_cat_kegg(kegg_dict, rconts, xpats)
                         elif xdb == "PANTHER":
                             (xcols, xvals) = self._extract_cat_panther(panther_txt, rconts, xpats, acc)
                         elif xdb == "Reactome":
@@ -532,7 +533,7 @@ class creator:
         xvals = list(map(list, zip(*xvals)))
         return (xcols, xvals)
 
-    def _extract_cat_kegg(self, rconts, xpats):
+    def _extract_cat_kegg(self, datadict, rconts, xpats):
         '''
         Parse the raw database file
         '''
@@ -548,7 +549,7 @@ class creator:
                 id = rcont[0]
                 rc = ''
                 try:
-                    record = REST.kegg_get(id).read()
+                    record = datadict[id]
                     if record:
                         pattern = re.search(r'DEFINITION\s*([^\n]*)', record, re.I | re.M)
                         rc += pattern[1] if pattern else ''
