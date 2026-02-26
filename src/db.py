@@ -235,7 +235,7 @@ class creator:
         batches = [db[i:i+10] for i in range(0, len(db), 10)] # 10 is max recommended batch size
         with ThreadPoolExecutor(max_workers=6) as ex:
             for i, batch_entries in enumerate(batches):
-                if i+1 == 1 or i+1 == len(batches) or i+1 % 10 == 0:
+                if i+1 == 1 or i+1 == len(batches) or (i+1) % 10 == 0:
                     logging.debug(f"Downloading KEGG batch {i+1}/{len(batches)}")
                 batch_result = ex.submit(self._fetch_kegg_batch, batch_entries).result()
                 result.update(batch_result)
