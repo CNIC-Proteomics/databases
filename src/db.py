@@ -14,16 +14,17 @@ from Bio.KEGG import REST
 
 
 class creator:
-    URL_CORUM   = 'http://mips.helmholtz-muenchen.de/corum/download/allComplexes.json.zip'
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    # https://www.uniprot.org/uniprot/?query=proteome:up000005640&format=fasta&include=yes&fil=reviewed:yes <- Deprecated
-    # https://rest.uniprot.org/uniprotkb/search?includeIsoform=true&query=proteome:UP000005640+AND+reviewed:true&format=fasta
+
     URL_UNIPROT = 'https://rest.uniprot.org/uniprotkb/stream' # stream does not paginate, search does
     URL_PARAMS_UNIPROT = {
         "includeIsoform": "true",
     }
-    # URL_UNIPROT += 'includeIsoform=true&' # include all isoforms
+
+    URL_CORUM   = 'https://mips.helmholtz-muenchen.de/fastapi-corum/public/file/download_current_file?file_id=complete&file_format=json'
+
     URL_PANTHER = 'https://data.pantherdb.org/ftp/sequence_classifications/current_release/PANTHER_Sequence_Classification_files/'
+
     SPECIES_LIST = {
         'human': {
             'scientific': 'Homo sapiens',
@@ -114,7 +115,7 @@ class creator:
             
         # create data files
         self.db_uniprot = self.TMP_DIR +'/'+ self.outfname +'.uniprot.dat'
-        self.db_corum   = self.TMP_DIR +'/'+ ".".join(os.path.basename( self.URL_CORUM ).split(".")[:-1]) # get the filename from the URL (without 'zip' extension)
+        self.db_corum   = self.TMP_DIR +'/'+ ".".join(['allComplexes', 'json'])
         self.db_panther = self.TMP_DIR +'/'+ self.outfname +'.panther.dat'
         self.db_kegg    = self.TMP_DIR +'/'+ self.outfname +'.kegg.dat'
         
@@ -270,12 +271,12 @@ class creator:
         # unzip the file
         if not os.path.isfile(self.db_corum):
             url = self.URL_CORUM
-            db_dat = self.TMP_DIR +'/'+ os.path.basename(url)
+            db_dat = self.TMP_DIR +'/'+ 'allComplexes.json'
             logging.debug("get "+url)
-            urllib.request.urlretrieve(url, db_dat)
-            zip_ref = zipfile.ZipFile(db_dat, 'r')
-            zip_ref.extractall(self.TMP_DIR)
-            zip_ref.close()
+            response = requests.get(url)
+            response.raise_for_status()          
+            with open(db_dat, "wb") as f:
+                f.write(response.content)
         else:
             logging.debug('cached corum')
         
