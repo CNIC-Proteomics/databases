@@ -107,6 +107,7 @@ class creator:
         self.outfname = species +'_'+ self.TIME +'_'+ f if f else ''
         self.db_fasta = self.outdir +'/'+ self.outfname +'.fasta'                
         self._download_fasta_db(self.db_fasta, f)
+        self.db_fasta_size = sum(1 for _ in SeqIO.parse(self.db_fasta, "fasta"))
         
         # remove duplicate sequences
         if d:
@@ -317,6 +318,7 @@ class creator:
         '''
         # declare output dataframe
         df = pd.DataFrame()
+        progress = 1
         
         if self.db_uniprot:
             # create reports from external data ---
@@ -346,21 +348,16 @@ class creator:
             # create cross-references data
             logging.info('create cross-references data from UniProtKB database...')
             for record in SwissProt.parse( open(self.db_uniprot) ):
+                if progress == 1 or progress == self.db_fasta_size or progress % 1000 == 0:
+                    logging.debug(str(progress) + " out of " + str(self.db_fasta_size))
+                progress += 1
                 
                 # extract main info ---
                 name = record.entry_name
                 acc = record.accessions[0]
-                # accs = ";".join(record.accessions[1:])
-                # if len(record.gene_name)>1:
-                #     print(str(record.gene_name))
-                # pattern = re.search(r'Name=(\w*)', record.gene_name, re.I | re.M)
-                # gene = pattern[1] if pattern else record.gene_name
                 if record.gene_name:
                     if 'Name' in record.gene_name[0]: gene = record.gene_name[0]['Name'].split(' ')[0] # Keep only the first name
                     else: continue
-                #   elif 'ORFNames' in record.gene_name[0]: gene = "ORF_" + "_".join(record.gene_name[0]['ORFNames'])
-                # else:
-                #    gene = record.entry_name + "_NO_CANONICAL_GENE_NAME"
                 pattern = re.search(r'[RecName|SubName]: Full=([^\;|\{]*)', record.description, re.I | re.M)
                 dsc = pattern[1] if pattern else record.description
                 dclass = record.data_class
@@ -441,7 +438,7 @@ class creator:
                         rconts = rcross[xdb]
                         if xdb == "GO":
                             (xcols, xvals) = self._extract_cat_go(rconts, xpats)
-                        elif xdb == "KEGG": # remote access
+                        elif xdb == "KEGG":
                             (xcols, xvals) = self._extract_cat_kegg(kegg_dict, rconts, xpats)
                         elif xdb == "PANTHER":
                             (xcols, xvals) = self._extract_cat_panther(panther_dict, rconts, xpats, acc)
